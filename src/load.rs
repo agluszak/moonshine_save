@@ -3,21 +3,18 @@ use std::marker::PhantomData;
 use std::path::PathBuf;
 
 use bevy_scene::DynamicScene;
-use moonshine_util::expect::{expect_deferred, ExpectDeferred};
-use moonshine_util::Static;
 use serde::de::DeserializeSeed;
 
 use bevy_ecs::entity::EntityHashMap;
 use bevy_ecs::prelude::*;
 use bevy_ecs::query::QueryFilter;
 use bevy_log::prelude::*;
-use bevy_scene::{ron, serde::SceneDeserializer, SceneSpawnError};
+use bevy_scene::{serde::SceneDeserializer, SceneSpawnError};
 
-use moonshine_util::event::{OnSingle, SingleEvent, TriggerSingle};
 use thiserror::Error;
 
 use crate::save::Save;
-use crate::{MapComponent, SceneMapper};
+use crate::{MapComponent, OnSingle, SceneMapper, SingleEvent, Static, TriggerSingle};
 
 /// A [`Component`] which marks its [`Entity`] to be despawned prior to load.
 ///
@@ -191,10 +188,6 @@ where
         self.input.consume().unwrap()
     }
 
-    fn before_load(&mut self, world: &mut World) {
-        world.insert_resource(ExpectDeferred);
-    }
-
     fn after_load(&mut self, world: &mut World, result: &LoadResult) {
         if let Ok(loaded) = result {
             for entity in loaded.entities() {
@@ -205,8 +198,6 @@ where
                 self.mapper.replace(entity);
             }
         }
-
-        expect_deferred(world);
     }
 }
 
@@ -325,7 +316,7 @@ pub fn load_on_default_event(event: OnSingle<LoadWorld>, commands: Commands) {
 
 /// An [`Observer`] which loads the world when the given [`LoadEvent`] is triggered.
 pub fn load_on<E: LoadEvent>(event: OnSingle<E>, mut commands: Commands) {
-    commands.queue_handled(LoadCommand(event.consume().unwrap()), |err, ctx| {
+    commands.queue_handled(LoadCommand(event.event().consume().unwrap()), |err, ctx| {
         error!("load failed: {err:?} ({ctx})");
     });
 }

@@ -2,15 +2,59 @@
 #![warn(missing_docs)]
 
 use std::marker::PhantomData;
+use std::sync::Mutex;
 
 use bevy_ecs::prelude::*;
-use moonshine_util::Static;
 
 /// Types, traits, and functions related to loading.
 pub mod load;
 
 /// Types, traits, and functions related to saving.
 pub mod save;
+
+/// A trait alias for `'static + Send + Sync`.
+pub trait Static: 'static + Send + Sync {}
+impl<T: 'static + Send + Sync> Static for T {}
+
+/// A wrapper for single-observer events that allows consuming the event data.
+#[derive(Event)]
+pub struct SingleEventWrapper<E>(Mutex<Option<E>>);
+
+impl<E> SingleEventWrapper<E> {
+    /// Creates a new wrapper containing the event.
+    pub fn new(event: E) -> Self {
+        Self(Mutex::new(Some(event)))
+    }
+
+    /// Consumes and returns the wrapped event, if it hasn't been consumed yet.
+    pub fn consume(&self) -> Option<E> {
+        self.0.lock().ok()?.take()
+    }
+}
+
+/// A trait for events that should only have a single observer.
+pub trait SingleEvent: Static {}
+
+/// Type alias for single-event triggers in observers.
+pub type OnSingle<'w, E> = On<'w, 'w, SingleEventWrapper<E>>;
+
+/// A trait for triggering single events via [`Commands`] or [`World`].
+pub trait TriggerSingle {
+    /// Triggers the given single event.
+    fn trigger_single<E: SingleEvent>(self, event: E);
+}
+
+impl TriggerSingle for &mut Commands<'_, '_> {
+    fn trigger_single<E: SingleEvent>(self, event: E) {
+        self.trigger(SingleEventWrapper::new(event));
+    }
+}
+
+impl TriggerSingle for &mut World {
+    fn trigger_single<E: SingleEvent>(self, event: E) {
+        self.trigger(SingleEventWrapper::new(event));
+    }
+}
 
 /// Common elements for saving/loading world state.
 pub mod prelude {
@@ -23,6 +67,8 @@ pub mod prelude {
         save_on, save_on_default_event, Save, SaveError, SaveEvent, SaveOutput, SaveWorld, Saved,
         TriggerSave,
     };
+
+    pub use crate::Static;
 
     pub use bevy_ecs::{
         entity::{EntityMapper, MapEntities},

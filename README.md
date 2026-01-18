@@ -126,8 +126,8 @@ struct PlayerView {
 }
 
 // Spawn `PlayerView` and associate it with the `Player` entity:
-fn on_player_added(trigger: Trigger<OnAdd, Player>, mut commands: Commands) {
-    let player = trigger.target();
+fn on_player_added(trigger: On<Add, Player>, mut commands: Commands) {
+    let player = trigger.event_target();
     commands.spawn(PlayerView { player });
 }
 ```

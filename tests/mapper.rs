@@ -3,7 +3,6 @@ use std::fs;
 use bevy::prelude::*;
 use bevy_ecs::system::RunSystemOnce;
 use moonshine_save::prelude::*;
-use moonshine_util::prelude::*;
 
 const SAVE_PATH: &str = "test_mapper.ron";
 

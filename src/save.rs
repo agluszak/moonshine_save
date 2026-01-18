@@ -7,13 +7,11 @@ use bevy_ecs::entity::EntityHashSet;
 use bevy_ecs::prelude::*;
 use bevy_ecs::query::QueryFilter;
 use bevy_log::prelude::*;
-use bevy_scene::{ron, DynamicScene, DynamicSceneBuilder, SceneFilter};
+use bevy_scene::{DynamicScene, DynamicSceneBuilder, SceneFilter};
 
-use moonshine_util::event::{OnSingle, SingleEvent, TriggerSingle};
-use moonshine_util::Static;
 use thiserror::Error;
 
-use crate::{MapComponent, SceneMapper};
+use crate::{MapComponent, OnSingle, SceneMapper, SingleEvent, Static, TriggerSingle};
 
 /// A [`Component`] which marks its [`Entity`] to be saved.
 #[derive(Component, Default, Debug, Clone)]
@@ -380,7 +378,7 @@ pub fn save_on_default_event(event: OnSingle<SaveWorld>, commands: Commands) {
 
 /// An [`Observer`] which saved the world when the given [`SaveEvent`] is triggered.
 pub fn save_on<E: SaveEvent>(event: OnSingle<E>, mut commands: Commands) {
-    commands.queue_handled(SaveCommand(event.consume().unwrap()), |err, ctx| {
+    commands.queue_handled(SaveCommand(event.event().consume().unwrap()), |err, ctx| {
         error!("save failed: {err:?} ({ctx})");
     });
 }
